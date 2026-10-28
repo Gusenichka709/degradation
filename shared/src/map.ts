@@ -1,0 +1,154 @@
+import { FEET_HEIGHT, TILE_SIZE } from './constants';
+
+/**
+ * Карта деревни, нарисованная буквами: одна буква — одна клетка 32 × 32.
+ * Чтобы поменять карту, перерисуй буквы. Все строки должны быть одной длины,
+ * иначе игра при запуске скажет, какая строка сломана.
+ *
+ *   .  трава          "  цветы            ,  дорога          =  мост
+ *   ~  вода           T  дерево           #  каменная стена  R  крыша
+ *   D  дверь          f  забор            b  куст            r  камень
+ *   S  точка, где появляются игроки (это тоже дорога)
+ *
+ * Сквозь воду, деревья, стены, крыши, двери, заборы, кусты и камни не пройти.
+ */
+const MAP_TEXT = `
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+TT..........T.........................~~......TT
+TT."....."............."..r..T........~~.T....TT
+TT.T...............................T..~~...T..TT
+TT.........fffff.RRRRRRRRR............~~b.....TT
+TT...RRRRR.f"""f.RRRRRRRRR....RRRRR...~~..r...TT
+TT...RRRRR.f"""f.RRRRRRRRR....RRRRR...~~....T.TT
+TT...##D##.f"""f.####D####....##D##...~~......TT
+TT.....,...ff,ff.....,,.........,.....~~.T."..TT
+TT.."..,.....,.."....,,...b.....,...T.~~......TT
+TT.....,.....,.......,,....."...,.....~~....T.TT
+TTb....,."..",...,,,,,,,,,,.....,.."..~~..T...TT
+TT.T...,.....,...,,,,,,,,,,.b...,.....~~.....bTT
+TT.....,.....,...,,,,,,,,,,.....,.....~~......TT
+TT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,==,,,,,,TT
+TT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,==,,,,,,TT
+TT...............,,,,S,,,,,"......T...~~......TT
+TT.b..........T..,,,,,,,,,,.."........~~b.....TT
+TT..RRRRRRR......,,,,,,,,,,...........~~.T..r.TT
+TT..RRRRRRR..."......,,.....RRRRR..b..~~......TT
+TT..RRRRRRR..........,,.....RRRRR.....~~...T..TT
+TT..###D###....b..T..,,.T"..##D##...".~~".....TT
+TT.....,...........".,,.......,.......~~.....TTT
+TT.....,.............,,.......,...r...~~...b..TT
+TT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,~~......TT
+TT........b.....b.....................~~..T.".TT
+TT.........r~~~~~r..............."....~~.r....TT
+TT.".T......~~~~~.."b..."..T.......T..~~....T.TT
+TT....................................~~......TT
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+`;
+
+/** Вид клетки: какой буквой рисуется, какой это кусок картинки tiles.png и можно ли сквозь неё пройти. */
+export interface TileKind {
+  char: string;
+  /** Номер кусочка 32 × 32 в tiles.png: слева направо, сверху вниз, начиная с 0. */
+  index: number;
+  name: string;
+  solid: boolean;
+}
+
+export const TILE_KINDS: readonly TileKind[] = [
+  { char: '.', index: 0, name: 'трава', solid: false },
+  { char: '"', index: 1, name: 'цветы', solid: false },
+  { char: ',', index: 2, name: 'дорога', solid: false },
+  { char: '~', index: 3, name: 'вода', solid: true },
+  { char: 'T', index: 4, name: 'дерево', solid: true },
+  { char: '#', index: 5, name: 'каменная стена', solid: true },
+  { char: 'R', index: 6, name: 'крыша', solid: true },
+  { char: 'D', index: 7, name: 'дверь', solid: true },
+  { char: '=', index: 8, name: 'мост', solid: false },
+  { char: 'f', index: 9, name: 'забор', solid: true },
+  { char: 'b', index: 10, name: 'куст', solid: true },
+  { char: 'r', index: 11, name: 'камень', solid: true },
+];
+
+/** Сколько клеток должно быть в tiles.png, чтобы нарисовать все виды клеток карты. */
+export const TILES_NEEDED = Math.max(...TILE_KINDS.map((kind) => kind.index)) + 1;
+
+/** Буква точки появления. Рисуется как дорога. */
+const SPAWN_CHAR = 'S';
+const SPAWN_DRAWN_AS = ',';
+
+const KIND_BY_CHAR = new Map(TILE_KINDS.map((kind) => [kind.char, kind]));
+
+function parseMap(text: string) {
+  const rows = text.split(/\r?\n/).map((row) => row.trimEnd()).filter((row) => row.length > 0);
+  const cols = rows[0]?.length ?? 0;
+  const grid: number[][] = [];
+  const solid: boolean[][] = [];
+  const spawns: { col: number; row: number }[] = [];
+
+  for (let row = 0; row < rows.length; row++) {
+    const line = rows[row]!;
+    if (line.length !== cols) {
+      throw new Error(`Карта сломана: в строке ${row + 1} ${line.length} букв, а в первой — ${cols}.`);
+    }
+    const gridRow: number[] = [];
+    const solidRow: boolean[] = [];
+    for (let col = 0; col < cols; col++) {
+      let char = line[col]!;
+      if (char === SPAWN_CHAR) {
+        spawns.push({ col, row });
+        char = SPAWN_DRAWN_AS;
+      }
+      const kind = KIND_BY_CHAR.get(char);
+      if (!kind) {
+        throw new Error(`Карта сломана: непонятная буква «${char}» в строке ${row + 1}, столбце ${col + 1}.`);
+      }
+      gridRow.push(kind.index);
+      solidRow.push(kind.solid);
+    }
+    grid.push(gridRow);
+    solid.push(solidRow);
+  }
+
+  const spawn = spawns[0];
+  if (!spawn) throw new Error(`Карта сломана: нет точки появления «${SPAWN_CHAR}».`);
+  return { cols, rows: rows.length, grid, solid, spawn };
+}
+
+const parsed = parseMap(MAP_TEXT);
+
+/** Ширина карты в клетках. */
+export const MAP_COLS = parsed.cols;
+/** Высота карты в клетках. */
+export const MAP_ROWS = parsed.rows;
+export const MAP_WIDTH_PX = MAP_COLS * TILE_SIZE;
+export const MAP_HEIGHT_PX = MAP_ROWS * TILE_SIZE;
+
+/** Номера кусочков tiles.png для каждой клетки — по ним клиент рисует карту. */
+export const TILE_GRID: readonly (readonly number[])[] = parsed.grid;
+
+/** Клетка, где появляются игроки. */
+export const SPAWN_TILE = parsed.spawn;
+
+/** Непроходима ли клетка. Всё за краем карты считается стеной. */
+export function isSolidTile(col: number, row: number): boolean {
+  if (row < 0 || row >= MAP_ROWS || col < 0 || col >= MAP_COLS) return true;
+  return parsed.solid[row]![col]!;
+}
+
+/** Точка «под ногами» персонажа, стоящего посередине клетки. */
+export function tileCenter(col: number, row: number): { x: number; y: number } {
+  return { x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + (TILE_SIZE + FEET_HEIGHT) / 2 };
+}
+
+/** Проходимые клетки вокруг точки появления — чтобы игроки не появлялись друг в друге. */
+export function spawnPoints(radius = 2): { x: number; y: number }[] {
+  const points: { x: number; y: number }[] = [];
+  for (let row = SPAWN_TILE.row - radius; row <= SPAWN_TILE.row + radius; row++) {
+    for (let col = SPAWN_TILE.col - radius; col <= SPAWN_TILE.col + radius; col++) {
+      if (!isSolidTile(col, row)) points.push(tileCenter(col, row));
+    }
+  }
+  return points;
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Деградация — прототип</title>
+  </head>
+  <body>
+    <div id="game"></div>
+
+    <div id="login" class="overlay" hidden>
+      <form id="login-form" class="panel" autocomplete="off" novalidate>
+        <h1>Деградация</h1>
+        <p class="subtitle">прототип · этап 1</p>
+        <label for="login-name">Как тебя зовут?</label>
+        <input id="login-name" maxlength="16" placeholder="Имя, 2–16 символов" spellcheck="false" />
+        <button id="login-button" type="submit">Войти в мир</button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+    </div>
+
+    <div id="status" role="status" hidden></div>
+
+    <div id="warnings" role="alert" hidden></div>
+
+    <div id="hud" hidden></div>
+
+    <div id="chat" hidden>
+      <div id="chat-log" aria-live="polite"></div>
+      <input id="chat-input" maxlength="200" placeholder="Enter — написать в чат" spellcheck="false" />
+    </div>
+
+    <div id="help" hidden>WASD — идти · мышь — прицел · Enter — чат · F3 — отладка</div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

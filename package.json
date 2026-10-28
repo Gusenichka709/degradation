@@ -1,0 +1,28 @@
+{
+  "name": "degradation-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Онлайн-RPG про деградацию — прототип, этап 1 (каркас)",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "predev": "node scripts/check-node.mjs",
+    "dev": "concurrently -k -n server,client -c yellow,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client",
+    "prestart": "node scripts/check-node.mjs",
+    "start": "npm run start -w server",
+    "test": "npm test -w server",
+    "check": "tsc -p shared && tsc -p server && tsc -p client"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

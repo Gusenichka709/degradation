@@ -1,0 +1,25 @@
+# Проверка при каждой заливке на GitHub: типы, тесты и сборка — на Windows и на Linux.
+# Результат виден во вкладке Actions репозитория: зелёная галочка — всё в порядке.
+name: Проверка
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build

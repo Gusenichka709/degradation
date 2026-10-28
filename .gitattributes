@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.png binary
+# Батники Windows ломаются без переводов строк CRLF.
+*.cmd text eol=crlf

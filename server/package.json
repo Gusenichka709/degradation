@@ -1,0 +1,21 @@
+{
+  "name": "@game/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Игровой сервер: принимает игроков, двигает мир, рассылает снимки",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "tsx --test test/map.test.ts test/movement.test.ts test/server.test.ts test/stress.test.ts"
+  },
+  "dependencies": {
+    "@game/shared": "*",
+    "tsx": "^4.23.15",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.2"
+  }
+}
