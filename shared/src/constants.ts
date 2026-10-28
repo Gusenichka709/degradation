@@ -37,5 +37,18 @@ export const NAME_MAX_LENGTH = 16;
 export const CHAT_MAX_LENGTH = 200;
 export const MAX_PLAYERS = 50;
 
+/** Деградация в процентах: от −20 (усердная учёба) до 100 (мир почти неузнаваем). */
+export const DEGRADATION_MIN = -20;
+export const DEGRADATION_MAX = 100;
+/** Пороги, на которых включаются новые эффекты, %. */
+export const DEGRADATION_THRESHOLDS = [25, 50, 75, 100] as const;
+/** Как быстро выветривается действие зелий: процентов в секунду (15 % уйдут за 2,5 минуты). */
+export const RELIEF_FADE_PER_SECOND = 0.1;
+/**
+ * Сколько сервер помнит деградацию вышедшего игрока по имени: 30 минут.
+ * Временно, пока нет аккаунтов и сохранения (этап 5).
+ */
+export const DEGRADATION_MEMORY_MS = 30 * 60 * 1000;
+
 /** Порт игрового сервера. */
 export const SERVER_PORT = 2567;

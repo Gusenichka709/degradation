@@ -13,6 +13,7 @@ import {
   type PlayerSnapshot,
   type ServerMessage,
 } from '@game/shared';
+import { Degradation, DegradationMemory } from './degradation';
 
 /** То, через что мир отправляет сообщения игроку. На деле это WebSocket, в тестах — заглушка. */
 export interface Outbox {
@@ -38,6 +39,8 @@ interface Player {
   /** Сколько тиков подряд от игрока не было нажатий. */
   idleTicks: number;
   lastChatAt: number;
+  /** Деградация персонажа. Только для сервера — в снимки и сообщения не попадает. */
+  degradation: Degradation;
   outbox: Outbox;
 }
 
@@ -55,13 +58,16 @@ export type JoinResult = { ok: true; id: number } | { ok: false; error: string }
  */
 export class World {
   private readonly players = new Map<number, Player>();
+  private readonly memory: DegradationMemory;
   private nextId = 1;
   tick = 0;
 
   constructor(
     private readonly now: () => number = () => Date.now(),
     private readonly random: () => number = Math.random,
-  ) {}
+  ) {
+    this.memory = new DegradationMemory(now);
+  }
 
   get playerCount(): number {
     return this.players.size;
@@ -69,6 +75,10 @@ export class World {
 
   nameOf(id: number): string | undefined {
     return this.players.get(id)?.name;
+  }
+
+  degradationOf(id: number): Degradation | undefined {
+    return this.players.get(id)?.degradation;
   }
 
   join(outbox: Outbox, rawName: string): JoinResult {
@@ -95,6 +105,7 @@ export class World {
       moveBudgetMs: 0,
       idleTicks: 0,
       lastChatAt: 0,
+      degradation: this.memory.take(name),
       outbox,
     };
     this.players.set(player.id, player);
@@ -109,6 +120,7 @@ export class World {
     const player = this.players.get(id);
     if (!player) return;
     this.players.delete(id);
+    this.memory.save(player.name, player.degradation);
     this.broadcast({ t: 'left', id });
     this.broadcast({ t: 'system', text: `${player.name} уходит` });
   }
@@ -139,7 +151,10 @@ export class World {
   /** Один тик мира. */
   step(): void {
     this.tick++;
-    for (const player of this.players.values()) this.movePlayer(player);
+    for (const player of this.players.values()) {
+      this.movePlayer(player);
+      player.degradation.fade(TICK_SECONDS);
+    }
 
     const players = [...this.players.values()].map(snapshotOf);
     for (const player of this.players.values()) {
