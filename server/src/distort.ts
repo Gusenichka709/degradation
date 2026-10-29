@@ -28,7 +28,10 @@ const SIMILAR: Record<string, string> = {
 
 const LETTER = /\p{L}/u;
 
-/** Какая доля букв искажена при такой деградации: до 10 % — ничего, на 100 % — почти половина. */
+/**
+ * Какая доля букв искажена: до 10 % — ничего, на 100 % — почти половина.
+ * Для книг сюда идёт деградация читающего, для чата — разница деградаций автора и читающего.
+ */
 export function distortionShare(degradation: number): number {
   if (degradation <= DISTORT_FROM) return 0;
   return (Math.min(degradation, 100) - DISTORT_FROM) / (100 - DISTORT_FROM) * DISTORT_MAX_SHARE;

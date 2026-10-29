@@ -227,7 +227,20 @@ export class World {
       this.command(player, text);
       return;
     }
-    this.broadcast({ t: 'chat', id, name: player.name, text });
+    this.sendChat(player, text);
+  }
+
+  /**
+   * Чат: каждый получатель видит реплику, искажённую по разнице деградаций с автором.
+   * Разница до 10 % — чисто, чем больше — тем сильнее путаются буквы. Двое на одной глубине
+   * (хоть оба на 100 %) понимают друг друга нормально. Себя автор видит как написал.
+   */
+  private sendChat(author: Player, text: string): void {
+    const depth = author.degradation.current;
+    for (const reader of this.players.values()) {
+      const share = reader === author ? 0 : distortionShare(Math.abs(reader.degradation.current - depth));
+      reader.outbox.send({ t: 'chat', id: author.id, name: author.name, text: distortText(text, share, this.random) });
+    }
   }
 
   /** Игрок нажал E: собирает куст, камень или шахту рядом либо заходит в библиотеку или к травнице. */
