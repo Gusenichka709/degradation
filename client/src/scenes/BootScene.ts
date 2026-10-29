@@ -11,6 +11,12 @@ const HERO_SHEET_HEIGHT = HERO_FRAME_HEIGHT * DIRECTION_NAMES.length;
 const AIM_MAX_SIZE = 64;
 /** Клеток в ряду tiles.png. */
 const TILES_PER_ROW = 4;
+/** Силуэт «краем глаза» — ровно кадр персонажа. */
+const GLIMPSE_WIDTH = 32;
+const GLIMPSE_HEIGHT = 48;
+/** Рисованные помехи (клякса, трещины): от 64 до 1024 пикселей по стороне — игра их масштабирует сама. */
+const HAZE_MIN_SIZE = 64;
+const HAZE_MAX_SIZE = 1024;
 
 /** Загружает картинки и готовит анимации. Свои рисунки просто клади вместо файлов в client/public/assets. */
 export class BootScene extends Phaser.Scene {
@@ -30,6 +36,10 @@ export class BootScene extends Phaser.Scene {
       frameHeight: HERO_FRAME_HEIGHT,
     });
     this.load.image('aim', 'assets/aim.png');
+    // Помехи рисуются поверх игры обычными картинками страницы; здесь грузим только для проверки размеров.
+    this.load.image('blot', 'assets/blot.png');
+    this.load.image('cracks', 'assets/cracks.png');
+    this.load.image('glimpse', 'assets/glimpse.png');
   }
 
   create(): void {
@@ -94,6 +104,27 @@ export class BootScene extends Phaser.Scene {
       problems.push(missing('aim.png'));
     } else if (aim.w > AIM_MAX_SIZE || aim.h > AIM_MAX_SIZE) {
       problems.push(`aim.png: ${aim.w} × ${aim.h} — великовато, нужно не больше ${AIM_MAX_SIZE} × ${AIM_MAX_SIZE}.`);
+    }
+
+    for (const file of ['blot', 'cracks']) {
+      const haze = size(file);
+      if (!haze) {
+        problems.push(missing(`${file}.png`));
+      } else if (Math.min(haze.w, haze.h) < HAZE_MIN_SIZE || Math.max(haze.w, haze.h) > HAZE_MAX_SIZE) {
+        problems.push(
+          `${file}.png: ${haze.w} × ${haze.h} — нужно от ${HAZE_MIN_SIZE} до ${HAZE_MAX_SIZE} пикселей по стороне ` +
+            '(заглушка 256 × 256).',
+        );
+      }
+    }
+
+    const glimpse = size('glimpse');
+    if (!glimpse) {
+      problems.push(missing('glimpse.png'));
+    } else if (glimpse.w !== GLIMPSE_WIDTH || glimpse.h !== GLIMPSE_HEIGHT) {
+      problems.push(
+        `glimpse.png: ${glimpse.w} × ${glimpse.h}, а нужно ровно ${GLIMPSE_WIDTH} × ${GLIMPSE_HEIGHT} (как кадр персонажа).`,
+      );
     }
 
     return problems;

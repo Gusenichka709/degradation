@@ -15,6 +15,8 @@ export class Net {
    * чуть позже «welcome», и без этого сообщения в промежутке потерялись бы.
    */
   readonly picked = new Set<number>();
+  /** Номер порога деградации (0 — ниже 25 %, 11 — 100 %). Точного числа клиент не знает. */
+  band = 0;
   /** Сколько миллисекунд сообщение идёт до сервера и обратно. */
   pingMs = 0;
   /** Вызывается, когда связь оборвалась (после того как была установлена). */
@@ -103,6 +105,9 @@ export class Net {
       case 'resource':
         if (message.picked) this.picked.add(message.id);
         else this.picked.delete(message.id);
+        break;
+      case 'scale':
+        this.band = message.band;
         break;
       case 'joined':
         this.names.set(message.player.id, message.player.name);

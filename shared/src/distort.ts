@@ -1,4 +1,4 @@
-import { DISTORT_FROM, DISTORT_MAX_SHARE } from '@game/shared';
+import { DISTORT_FROM, DISTORT_MAX_SHARE } from './constants';
 
 /** Похожие буквы: в искажённом тексте одна подменяется другой. */
 const SIMILAR: Record<string, string> = {
@@ -47,7 +47,8 @@ function similar(char: string): string | null {
 /**
  * Коверкает текст: каждая буква с вероятностью share подменяется похожей, меняется местами
  * с соседней или пропадает. Пробелы и знаки препинания не трогаем — слова остаются на месте.
- * Целые слова пока не меняем (прототип). Решает сервер, клиент получает уже искажённое.
+ * Целые слова пока не меняем (прототип). Книги и чат коверкает сервер — клиент получает уже искажённое;
+ * клиент сам коверкает только то, что и так знает (имена над головами).
  */
 export function distortText(text: string, share: number, random: () => number): string {
   if (share <= 0) return text;

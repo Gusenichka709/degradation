@@ -1,11 +1,4 @@
-import { DEGRADATION_THRESHOLDS } from '@game/shared';
-
-/** Номер порога: 0 — ниже 25 %, 1 — от 25 %, 2 — от 30 % … 11 — 100 %. Клиент знает только его. */
-export function thresholdIndex(value: number): number {
-  let index = 0;
-  for (const threshold of DEGRADATION_THRESHOLDS) if (value >= threshold) index++;
-  return index;
-}
+import { thresholdIndex } from '@game/shared';
 
 /** Порог, с которого шкалы нет совсем (50 %). */
 const HIDDEN_FROM = thresholdIndex(50);

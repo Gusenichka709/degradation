@@ -9,6 +9,7 @@ export interface HudInfo {
   tick: number;
   pending: number;
   corrections: number;
+  band: number;
 }
 
 /** Строчка сверху слева: кто в сети и пинг. F3 — подробности для отладки. */
@@ -44,6 +45,7 @@ export class Hud {
         `x ${info.x.toFixed(1)} · y ${info.y.toFixed(1)} · клетка ${Math.floor(info.x / TILE_SIZE)}, ${Math.floor(info.y / TILE_SIZE)}`,
         `тик сервера: ${info.tick}`,
         `ждут ответа сервера: ${info.pending} · поправок: ${info.corrections}`,
+        `порог помех: ${info.band}`,
       );
     }
     this.root.textContent = lines.join('\n');

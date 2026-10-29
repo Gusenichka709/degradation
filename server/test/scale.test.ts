@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { TICK_MS, type ServerMessage } from '@game/shared';
-import { LyingScale, thresholdIndex } from '../src/scale';
+import { TICK_MS, thresholdIndex, type ServerMessage } from '@game/shared';
+import { LyingScale } from '../src/scale';
 import { World } from '../src/world';
 
 /** Случайные числа, одинаковые от запуска к запуску: тест не мигает. */

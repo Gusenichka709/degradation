@@ -7,6 +7,7 @@ import { BookView } from './ui/book';
 import { ChatBox } from './ui/chat';
 import { Hud } from './ui/hud';
 import { LoginScreen } from './ui/login';
+import { Haze } from './ui/haze';
 import { MindBar } from './ui/mind';
 import { StatusBar, Warnings } from './ui/status';
 import './style.css';
@@ -56,6 +57,7 @@ const chat = new ChatBox();
 const hud = new Hud();
 const mind = new MindBar();
 const book = new BookView();
+const haze = new Haze();
 const status = new StatusBar();
 const warnings = new Warnings();
 let myId = 0;
@@ -115,6 +117,7 @@ async function enterWorld(name: string): Promise<string | null> {
   chat.show();
   hud.show();
   mind.show();
+  haze.show();
   const data: WorldSceneData = { net, chat, hud, book, myId: message.id, you: message.you, tick: message.tick };
   game.scene.start('world', data);
   return null;
@@ -174,7 +177,10 @@ login.onSubmit = async (name) => {
 net.on((message) => {
   if (message.t === 'chat') chat.add(message.id === myId ? 'self' : 'chat', message.text, message.name);
   else if (message.t === 'system') chat.add('system', message.text);
-  else if (message.t === 'scale') mind.update(message.band, message.shown);
+  else if (message.t === 'scale') {
+    mind.update(message.band, message.shown);
+    haze.setBand(message.band);
+  }
   else if (message.t === 'book') book.show(message);
 });
 
@@ -188,5 +194,6 @@ net.onClose = () => {
   hud.hide();
   mind.hide();
   book.hide();
+  haze.hide();
   void reconnect();
 };

@@ -10,6 +10,8 @@ import {
   TICK_SECONDS,
   TILE_GRID,
   TILE_SIZE,
+  distortText,
+  effectStrength,
   facingFromAngle,
   normalizeAngle,
   round2,
@@ -50,6 +52,9 @@ const NAME_OFFSET_Y = 60;
 const AIM_RADIUS_X = 24;
 const AIM_RADIUS_Y = 30;
 
+/** Как часто перекручиваются имена над головами, когда деградация их коверкает (мс). */
+const NAMES_FLICKER_MS = 1200;
+
 /** Положение чужого игрока в момент времени сервера. */
 interface Sample {
   time: number;
@@ -73,12 +78,15 @@ class Avatar {
   readonly label: Phaser.GameObjects.Text;
   readonly aimMarker: Phaser.GameObjects.Image;
   readonly samples: Sample[] = [];
+  /** Настоящее имя. На экране оно может быть исковеркано помехами. */
+  private name: string;
   x = 0;
   y = 0;
   aim = Math.PI / 2;
   moving = false;
 
   constructor(scene: Phaser.Scene, name: string, isMe: boolean) {
+    this.name = name;
     this.sprite = scene.add.sprite(0, 0, 'hero', 1).setOrigin(0.5, 1);
     this.label = scene.add
       .text(0, 0, name, {
@@ -95,7 +103,13 @@ class Avatar {
   }
 
   setName(name: string): void {
+    this.name = name;
     this.label.setText(name);
+  }
+
+  /** Показать имя искажённым: share — доля перепутанных букв, 0 — как есть. */
+  garbleName(share: number): void {
+    this.label.setText(share > 0 ? distortText(this.name, share, Math.random) : this.name);
   }
 
   /** Переносит картинку туда, где персонаж сейчас, и выбирает кадр. */
@@ -162,6 +176,7 @@ export class WorldScene extends Phaser.Scene {
   private lastTick = 0;
   private corrections = 0;
   private hudTimer = 0;
+  private namesTimer = 0;
 
   constructor() {
     super('world');
@@ -247,6 +262,15 @@ export class WorldScene extends Phaser.Scene {
 
     this.drawOthers();
 
+    this.namesTimer -= delta;
+    if (this.namesTimer <= 0) {
+      this.namesTimer = NAMES_FLICKER_MS;
+      // 80 %: имена над головами коверкаются (и своё тоже) — каждый раз по-новому.
+      const strength = effectStrength('names', this.net.band);
+      const share = strength > 0 ? Math.min(0.6, 0.15 + 0.12 * strength) : 0;
+      for (const avatar of [this.me, ...this.others.values()]) avatar.garbleName(share);
+    }
+
     this.hudTimer -= delta;
     if (this.hudTimer <= 0) {
       this.hudTimer = 250;
@@ -259,6 +283,7 @@ export class WorldScene extends Phaser.Scene {
         tick: this.lastTick,
         pending: this.pending.length,
         corrections: this.corrections,
+        band: this.net.band,
       });
     }
   }

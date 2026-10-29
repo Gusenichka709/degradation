@@ -9,6 +9,8 @@ import {
   TICK_SECONDS,
   USE_COOLDOWN_MS,
   cleanChatText,
+  distortText,
+  distortionShare,
   nameError,
   normalizeName,
   round2,
@@ -23,7 +25,6 @@ import {
 } from '@game/shared';
 import { loadBooks, type Book } from './books';
 import { Degradation, DegradationMemory, Habit } from './degradation';
-import { distortText, distortionShare } from './distort';
 import { NOTHING_TO_GATHER, ResourceField, emptyText, gatherText } from './gathering';
 import { LyingScale, type ScaleView } from './scale';
 

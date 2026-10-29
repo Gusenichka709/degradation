@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { LIBRARY_COOLDOWN_MS, POTION_COOLDOWN_MS, POTION_RELIEF, USE_COOLDOWN_MS, type ServerMessage } from '@game/shared';
+import {
+  LIBRARY_COOLDOWN_MS,
+  POTION_COOLDOWN_MS,
+  POTION_RELIEF,
+  USE_COOLDOWN_MS,
+  distortText,
+  distortionShare,
+  type ServerMessage,
+} from '@game/shared';
 import { loadBooks, parseBook, type Book } from '../src/books';
-import { distortText, distortionShare } from '../src/distort';
 import { makeWorld, walk } from './helpers';
 
 const SAMPLE = `Название: Проба пера
