@@ -9,6 +9,8 @@ export const HERO_FRAMES_PER_ROW = 3;
 const HERO_SHEET_WIDTH = HERO_FRAME_WIDTH * HERO_FRAMES_PER_ROW;
 const HERO_SHEET_HEIGHT = HERO_FRAME_HEIGHT * DIRECTION_NAMES.length;
 const AIM_MAX_SIZE = 64;
+/** Клеток в ряду tiles.png. */
+const TILES_PER_ROW = 4;
 
 /** Загружает картинки и готовит анимации. Свои рисунки просто клади вместо файлов в client/public/assets. */
 export class BootScene extends Phaser.Scene {
@@ -69,7 +71,11 @@ export class BootScene extends Phaser.Scene {
     } else {
       const count = (tiles.w / TILE_SIZE) * (tiles.h / TILE_SIZE);
       if (count < TILES_NEEDED) {
-        problems.push(`tiles.png: в картинке ${count} клеток, а карте нужно ${TILES_NEEDED} (128 × 96 — это 12 клеток).`);
+        const height = Math.ceil(TILES_NEEDED / TILES_PER_ROW) * TILE_SIZE;
+        problems.push(
+          `tiles.png: в картинке ${count} клеток, а карте нужно ${TILES_NEEDED} — ` +
+            `сделай холст ${TILES_PER_ROW * TILE_SIZE} × ${height}.`,
+        );
       }
     }
 

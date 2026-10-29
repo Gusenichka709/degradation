@@ -30,6 +30,15 @@ const MAX_MESSAGE_BYTES = 4096;
  */
 const DEFAULT_HEARTBEAT_MS = 5000;
 
+/**
+ * Соединение пришло с этого же компьютера (а не от друга по Wi-Fi). Клиент подключается к серверу
+ * напрямую, без посредников, поэтому адрес настоящий.
+ */
+function isLocalAddress(address: string | undefined): boolean {
+  if (!address) return false;
+  return address === '::1' || address.startsWith('127.') || address.startsWith('::ffff:127.');
+}
+
 /** Запускает HTTP-сервер (раздаёт страницу) и WebSocket-сервер (сама игра) на одном порту. */
 export function startServer(options: ServerOptions): Promise<RunningServer> {
   const log = options.log ?? (() => {});
@@ -38,8 +47,9 @@ export function startServer(options: ServerOptions): Promise<RunningServer> {
   const wss = new WebSocketServer({ server: http, maxPayload: MAX_MESSAGE_BYTES });
   const alive = new WeakMap<WebSocket, boolean>();
 
-  wss.on('connection', (socket) => {
+  wss.on('connection', (socket, request) => {
     let playerId: number | null = null;
+    const local = isLocalAddress(request.socket.remoteAddress);
     alive.set(socket, true);
     socket.on('pong', () => alive.set(socket, true));
     const outbox: Outbox = {
@@ -61,7 +71,7 @@ export function startServer(options: ServerOptions): Promise<RunningServer> {
       // Пока игрок не представился, принимаем только «join».
       if (playerId === null) {
         if (message.t !== 'join') return;
-        const result = world.join(outbox, message.name);
+        const result = world.join(outbox, message.name, { local });
         if (result.ok) {
           playerId = result.id;
           log(`+ ${world.nameOf(playerId)} (№${playerId}) — в игре: ${world.playerCount}`);
@@ -73,6 +83,7 @@ export function startServer(options: ServerOptions): Promise<RunningServer> {
 
       if (message.t === 'input') world.queueInput(playerId, message);
       else if (message.t === 'chat') world.chat(playerId, message.text);
+      else if (message.t === 'use') world.use(playerId);
     });
 
     socket.on('close', () => {

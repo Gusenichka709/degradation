@@ -8,9 +8,11 @@ import { FEET_HEIGHT, TILE_SIZE } from './constants';
  *   .  трава          "  цветы            ,  дорога          =  мост
  *   ~  вода           T  дерево           #  каменная стена  R  крыша
  *   D  дверь          f  забор            b  куст            r  камень
+ *   m  шахта
  *   S  точка, где появляются игроки (это тоже дорога)
  *
- * Сквозь воду, деревья, стены, крыши, двери, заборы, кусты и камни не пройти.
+ * Сквозь воду, деревья, стены, крыши, двери, заборы, кусты, камни и шахту не пройти.
+ * Кусты, камни и шахту собирают по E (см. resources.ts).
  */
 const MAP_TEXT = `
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
@@ -39,7 +41,7 @@ TT..###D###....b..T..,,.T"..##D##...".~~".....TT
 TT.....,...........".,,.......,.......~~.....TTT
 TT.....,.............,,.......,...r...~~...b..TT
 TT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,~~......TT
-TT........b.....b.....................~~..T.".TT
+TT........b.....b.....................~~..m.".TT
 TT.........r~~~~~r..............."....~~.r....TT
 TT.".T......~~~~~.."b..."..T.......T..~~....T.TT
 TT....................................~~......TT
@@ -69,10 +71,19 @@ export const TILE_KINDS: readonly TileKind[] = [
   { char: 'f', index: 9, name: 'забор', solid: true },
   { char: 'b', index: 10, name: 'куст', solid: true },
   { char: 'r', index: 11, name: 'камень', solid: true },
+  { char: 'm', index: 14, name: 'шахта', solid: true },
 ];
 
+/**
+ * Клетки, которых на карте нет буквами: в них превращаются куст и камень после сбора, пока не отрастут.
+ * Проходимость не меняется — сквозь пустой куст тоже не пройти.
+ */
+export const PICKED_BUSH_TILE = 12;
+export const PICKED_STONE_TILE = 13;
+
 /** Сколько клеток должно быть в tiles.png, чтобы нарисовать все виды клеток карты. */
-export const TILES_NEEDED = Math.max(...TILE_KINDS.map((kind) => kind.index)) + 1;
+export const TILES_NEEDED =
+  Math.max(...TILE_KINDS.map((kind) => kind.index), PICKED_BUSH_TILE, PICKED_STONE_TILE) + 1;
 
 /** Буква точки появления. Рисуется как дорога. */
 const SPAWN_CHAR = 'S';

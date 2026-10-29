@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   MAP_COLS,
   MAP_ROWS,
+  RESOURCE_SPOTS,
   SPAWN_TILE,
   TILE_GRID,
   TILE_KINDS,
@@ -59,4 +60,18 @@ test('из точки появления можно дойти до любой �
     }
   }
   assert.deepEqual(unreachable, [], 'есть клетки, до которых не дойти');
+});
+
+test('к каждому кусту, камню и шахте можно подойти вплотную', () => {
+  const kinds = new Set(RESOURCE_SPOTS.map((spot) => spot.kind));
+  assert.deepEqual([...kinds].sort(), ['bush', 'mine', 'stone']);
+  for (const { col, row, kind } of RESOURCE_SPOTS) {
+    const free = [
+      [col + 1, row],
+      [col - 1, row],
+      [col, row + 1],
+      [col, row - 1],
+    ].some(([c, r]) => !isSolidTile(c!, r!));
+    assert.ok(free, `к месту «${kind}» в ${col}, ${row} не подойти`);
+  }
 });

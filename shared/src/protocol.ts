@@ -36,12 +36,17 @@ export type ClientMessage =
   | { t: 'join'; name: string }
   | InputMessage
   | { t: 'chat'; text: string }
+  /** Нажал E: собрать то, что рядом. Что именно, решает сервер. */
+  | { t: 'use' }
   | { t: 'ping'; c: number };
 
 /** Сервер → клиент. */
 export type ServerMessage =
-  /** Тебя пустили в мир: твой номер, где ты стоишь и кто ещё в игре. */
-  | { t: 'welcome'; id: number; tick: number; you: PlayerSnapshot; players: PlayerInfo[] }
+  /**
+   * Тебя пустили в мир: твой номер, где ты стоишь и кто ещё в игре.
+   * picked — номера мест сбора (RESOURCE_SPOTS), которые сейчас пустые.
+   */
+  | { t: 'welcome'; id: number; tick: number; you: PlayerSnapshot; players: PlayerInfo[]; picked: number[] }
   /** Не пустили: имя занято, сервер полон и т. п. */
   | { t: 'error'; message: string }
   /** Снимок мира, 20 раз в секунду. ack — номер твоего последнего учтённого нажатия. */
@@ -50,6 +55,8 @@ export type ServerMessage =
   | { t: 'left'; id: number }
   | { t: 'chat'; id: number; name: string; text: string }
   | { t: 'system'; text: string }
+  /** Место сбора опустело (picked: true) или отросло (false). */
+  | { t: 'resource'; id: number; picked: boolean }
   | { t: 'pong'; c: number };
 
 function isNumber(value: unknown): value is number {
@@ -88,6 +95,8 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       const text = m.text;
       return typeof text === 'string' ? { t: 'chat', text } : null;
     }
+    case 'use':
+      return { t: 'use' };
     case 'ping': {
       const c = m.c;
       return isNumber(c) ? { t: 'ping', c } : null;

@@ -10,6 +10,11 @@ const SILENCE_LIMIT_MS = 5000;
 export class Net {
   /** Имена всех, кто сейчас в игре: номер → имя. */
   readonly names = new Map<number, string>();
+  /**
+   * Пустые кусты и камни (номера в RESOURCE_SPOTS). Храним здесь, а не в сцене: сцена создаётся
+   * чуть позже «welcome», и без этого сообщения в промежутке потерялись бы.
+   */
+  readonly picked = new Set<number>();
   /** Сколько миллисекунд сообщение идёт до сервера и обратно. */
   pingMs = 0;
   /** Вызывается, когда связь оборвалась (после того как была установлена). */
@@ -92,6 +97,12 @@ export class Net {
       case 'welcome':
         this.names.clear();
         for (const player of message.players) this.names.set(player.id, player.name);
+        this.picked.clear();
+        for (const id of message.picked) this.picked.add(id);
+        break;
+      case 'resource':
+        if (message.picked) this.picked.add(message.id);
+        else this.picked.delete(message.id);
         break;
       case 'joined':
         this.names.set(message.player.id, message.player.name);

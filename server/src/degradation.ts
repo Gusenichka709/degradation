@@ -1,4 +1,12 @@
-import { DEGRADATION_MAX, DEGRADATION_MEMORY_MS, DEGRADATION_MIN, RELIEF_FADE_PER_SECOND } from '@game/shared';
+import {
+  DEGRADATION_MAX,
+  DEGRADATION_MEMORY_MS,
+  DEGRADATION_MIN,
+  HABIT_MAX,
+  HABIT_RESET_MS,
+  HABIT_STEP,
+  RELIEF_FADE_PER_SECOND,
+} from '@game/shared';
 
 function clampDegradation(value: number): number {
   return Math.min(DEGRADATION_MAX, Math.max(DEGRADATION_MIN, value));
@@ -50,6 +58,44 @@ export class Degradation {
   /** Прошло столько-то секунд: действие зелий слабеет. */
   fade(seconds: number): void {
     if (this.relief > 0) this.relief = Math.max(0, this.relief - RELIEF_FADE_PER_SECOND * seconds);
+  }
+
+  /** Только для отладки (/дег): ставит истинную деградацию и снимает действие зелий. */
+  set(value: number): void {
+    this.truth = clampDegradation(value);
+    this.relief = 0;
+  }
+}
+
+/**
+ * Приедание: одно и то же подряд тупит всё сильнее. Каждый сбор того же вида подряд прибавляет
+ * к множителю прироста HABIT_STEP, до HABIT_MAX. Другой вид или перерыв дольше HABIT_RESET_MS —
+ * и снова ×1.
+ */
+export class Habit {
+  private kind: string | null = null;
+  private streak = 0;
+  private lastAt = 0;
+
+  /** Персонаж снова что-то сделал (вид kind, время now в мс). Возвращает множитель прироста. */
+  repeat(kind: string, now: number): number {
+    if (kind !== this.kind || now - this.lastAt > HABIT_RESET_MS) {
+      this.kind = kind;
+      this.streak = 0;
+    }
+    this.streak++;
+    this.lastAt = now;
+    return this.multiplier;
+  }
+
+  /** Множитель последнего дела: ×1 на первом, дальше растёт. */
+  get multiplier(): number {
+    return Math.min(HABIT_MAX, 1 + HABIT_STEP * Math.max(0, this.streak - 1));
+  }
+
+  /** Сколько раз подряд одно и то же. */
+  get count(): number {
+    return this.streak;
   }
 }
 

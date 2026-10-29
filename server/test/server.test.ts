@@ -78,6 +78,21 @@ test('мусор от клиента сервер не роняет', async () =
   await bot.close();
 });
 
+test('E и отладочная команда доходят через сеть', async () => {
+  const bot = await Bot.connect(server.port);
+  const welcome = await bot.join('Тыкалка');
+  assert.ok(Array.isArray(welcome.picked));
+
+  bot.send({ t: 'use' });
+  await bot.waitFor('system', (m) => m.text === 'Рядом нечего собрать.');
+
+  // Бот подключён с 127.0.0.1 — это «тот же компьютер», ему отладка можно.
+  bot.send({ t: 'chat', text: '/дег 12' });
+  await bot.waitFor('system', (m) => m.text.startsWith('Отладка: истинная 12 %'));
+  assert.equal(bot.count('chat'), 0, 'команда не должна уходить в чат');
+  await bot.close();
+});
+
 test('снимки мира приходят примерно 20 раз в секунду', async () => {
   const bot = await Bot.connect(server.port);
   await bot.join('Счётчик');

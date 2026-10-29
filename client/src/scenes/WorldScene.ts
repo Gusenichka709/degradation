@@ -4,6 +4,8 @@ import {
   INTERPOLATION_DELAY_MS,
   MAP_HEIGHT_PX,
   MAP_WIDTH_PX,
+  RESOURCE_RULES,
+  RESOURCE_SPOTS,
   TICK_MS,
   TICK_SECONDS,
   TILE_GRID,
@@ -139,6 +141,7 @@ export class WorldScene extends Phaser.Scene {
   private hud!: Hud;
   private myId = 0;
 
+  private map!: Phaser.Tilemaps.Tilemap;
   private me!: Avatar;
   private readonly others = new Map<number, Avatar>();
   private keys!: MovementKeys;
@@ -178,13 +181,14 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(): void {
-    const map = this.make.tilemap({
+    this.map = this.make.tilemap({
       data: TILE_GRID.map((row) => [...row]),
       tileWidth: TILE_SIZE,
       tileHeight: TILE_SIZE,
     });
-    const tiles = map.addTilesetImage('tiles');
-    if (tiles) map.createLayer(0, tiles, 0, 0);
+    const tiles = this.map.addTilesetImage('tiles');
+    if (tiles) this.map.createLayer(0, tiles, 0, 0);
+    for (const id of this.net.picked) this.drawResource(id);
 
     this.me = new Avatar(this, this.net.names.get(this.myId) ?? 'я', true);
     this.me.x = this.predicted.x;
@@ -203,6 +207,10 @@ export class WorldScene extends Phaser.Scene {
     ) as MovementKeys;
     this.input.on('pointermove', () => {
       this.pointerMoved = true;
+    });
+    // E — собрать то, что рядом. Что именно и вышло ли, решает сервер. Зажатая клавиша не повторяет.
+    this.input.keyboard!.on('keydown-E', (event: KeyboardEvent) => {
+      if (!event.repeat && !this.chat.typing) this.net.send({ t: 'use' });
     });
     // Ушли в другое окно — отпускаем клавиши, чтобы персонаж не убежал сам.
     this.game.events.on(Phaser.Core.Events.BLUR, this.releaseKeys, this);
@@ -299,7 +307,19 @@ export class WorldScene extends Phaser.Scene {
         this.others.get(message.id)?.destroy();
         this.others.delete(message.id);
         break;
+      case 'resource':
+        this.drawResource(message.id);
+        break;
     }
+  }
+
+  /** Рисует куст или камень пустым или целым — как сейчас записано в net.picked. */
+  private drawResource(id: number): void {
+    const spot = RESOURCE_SPOTS[id];
+    if (!spot) return;
+    const pickedTile = RESOURCE_RULES[spot.kind].pickedTile;
+    const tile = this.net.picked.has(id) && pickedTile !== null ? pickedTile : TILE_GRID[spot.row]![spot.col]!;
+    this.map.putTileAt(tile, spot.col, spot.row);
   }
 
   private onSnapshot(tick: number, ack: number, players: PlayerSnapshot[]): void {
