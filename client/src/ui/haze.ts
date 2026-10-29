@@ -1,4 +1,4 @@
-import { effectStrength } from '@game/shared';
+import { distortText, effectStrength } from '@game/shared';
 
 /** Клякса-морок: где она и куда ползёт (в процентах экрана). */
 interface Blot {
@@ -39,6 +39,9 @@ export class Haze {
   private lastTime = 0;
   private nextGlimpseAt = 0;
   private glimpseUntil = 0;
+  /** Тексты интерфейса, которые на 90 % начинают врать, и как они выглядят честно. */
+  private readonly lies: { set: (text: string) => void; honest: string }[] = [];
+  private nextLieAt = 0;
 
   constructor() {
     this.vignette.className = 'haze-vignette';
@@ -56,6 +59,11 @@ export class Haze {
       this.root.append(img);
     }
     this.root.append(this.glimpse);
+
+    const help = document.getElementById('help');
+    if (help) this.lies.push({ honest: help.textContent ?? '', set: (text) => (help.textContent = text) });
+    const input = document.getElementById('chat-input') as HTMLInputElement | null;
+    if (input) this.lies.push({ honest: input.placeholder, set: (text) => (input.placeholder = text) });
   }
 
   /** Вошли в мир — помехи можно рисовать. */
@@ -70,6 +78,7 @@ export class Haze {
     this.root.hidden = true;
     this.game.style.filter = '';
     this.game.style.transform = '';
+    for (const lie of this.lies) lie.set(lie.honest);
     cancelAnimationFrame(this.frame);
     this.frame = 0;
   }
@@ -86,6 +95,7 @@ export class Haze {
     this.drawCracks();
     this.drawGlimpse(time);
     this.drawColors(time / 1000);
+    this.drawLies(time);
     if (this.active) this.frame = requestAnimationFrame((next) => this.tick(next));
   }
 
@@ -147,6 +157,14 @@ export class Haze {
       this.nextGlimpseAt = now + random(12000, 22000) / s;
     }
     this.glimpse.hidden = now >= this.glimpseUntil;
+  }
+
+  /** 90 %: врёт интерфейс — подсказки перекручиваются раз в полторы секунды. */
+  private drawLies(now: number): void {
+    if (now < this.nextLieAt) return;
+    this.nextLieAt = now + 1500;
+    const s = effectStrength('interface', this.band);
+    for (const lie of this.lies) lie.set(s > 0 ? distortText(lie.honest, 0.2 + 0.1 * s, Math.random) : lie.honest);
   }
 
   /** 70 %: цвета мира плывут; на 90 % и глубже мир ещё и чуть качается. */

@@ -16,9 +16,11 @@ export function thresholdIndex(value: number): number {
  *   60 — трещины по углам;
  *   70 — цвета мира плывут;
  *   80 — имена над головами коверкаются;
- *   90 и 100 — всего больше и чаще, мир почти неузнаваем.
+ *   90 — врёт интерфейс: подсказки коверкаются;
+ *   100 — на долю секунды проступает истинный облик мира: ведьминские знаки на стенах.
+ *   На 90 и 100 всего остального тоже больше и чаще.
  */
-export type Effect = 'blot' | 'vignette' | 'glimpse' | 'cracks' | 'colors' | 'names';
+export type Effect = 'blot' | 'vignette' | 'glimpse' | 'cracks' | 'colors' | 'names' | 'interface' | 'truth';
 
 /** С какой деградации (%) включается помеха. */
 export const EFFECT_FROM: Readonly<Record<Effect, number>> = {
@@ -28,6 +30,8 @@ export const EFFECT_FROM: Readonly<Record<Effect, number>> = {
   cracks: 60,
   colors: 70,
   names: 80,
+  interface: 90,
+  truth: 100,
 };
 
 /**

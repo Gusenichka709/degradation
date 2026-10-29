@@ -9,6 +9,7 @@ import {
   TICK_MS,
   TICK_SECONDS,
   TILE_GRID,
+  TILE_KINDS,
   TILE_SIZE,
   distortText,
   effectStrength,
@@ -54,6 +55,10 @@ const AIM_RADIUS_Y = 30;
 
 /** Как часто перекручиваются имена над головами, когда деградация их коверкает (мс). */
 const NAMES_FLICKER_MS = 1200;
+/** Стены, на которых на 100 % проступают ведьминские знаки: каменная стена и стены с вывесками. */
+const SIGIL_WALLS = new Set(['#', 'K', 'Z'].map((char) => TILE_KINDS.find((kind) => kind.char === char)!.index));
+/** Сколько знаков проступает за раз. */
+const SIGILS_PER_FLASH = 8;
 
 /** Положение чужого игрока в момент времени сервера. */
 interface Sample {
@@ -177,6 +182,7 @@ export class WorldScene extends Phaser.Scene {
   private corrections = 0;
   private hudTimer = 0;
   private namesTimer = 0;
+  private sigilTimer = 0;
 
   constructor() {
     super('world');
@@ -271,6 +277,12 @@ export class WorldScene extends Phaser.Scene {
       for (const avatar of [this.me, ...this.others.values()]) avatar.garbleName(share);
     }
 
+    this.sigilTimer -= delta;
+    if (this.sigilTimer <= 0) {
+      this.sigilTimer = Phaser.Math.Between(8000, 16000);
+      if (effectStrength('truth', this.net.band) > 0) this.flashTruth();
+    }
+
     this.hudTimer -= delta;
     if (this.hudTimer <= 0) {
       this.hudTimer = 250;
@@ -344,6 +356,35 @@ export class WorldScene extends Phaser.Scene {
       case 'resource':
         this.drawResource(message.id);
         break;
+    }
+  }
+
+  /**
+   * 100 %: на долю секунды проступает истинный облик мира — ведьминские знаки на стенах вокруг.
+   * Это только картинка: сервер про неё не знает.
+   */
+  private flashTruth(): void {
+    const view = this.cameras.main.worldView;
+    const walls: { col: number; row: number }[] = [];
+    for (let row = Math.floor(view.top / TILE_SIZE); row <= Math.floor(view.bottom / TILE_SIZE); row++) {
+      for (let col = Math.floor(view.left / TILE_SIZE); col <= Math.floor(view.right / TILE_SIZE); col++) {
+        if (SIGIL_WALLS.has(TILE_GRID[row]?.[col] ?? -1)) walls.push({ col, row });
+      }
+    }
+    for (const { col, row } of Phaser.Utils.Array.Shuffle(walls).slice(0, SIGILS_PER_FLASH)) {
+      const sigil = this.add
+        .image(col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2, 'sigil')
+        .setAlpha(0)
+        .setDepth(1);
+      this.tweens.chain({
+        targets: sigil,
+        tweens: [
+          { alpha: 0.95, duration: 120 },
+          { alpha: 0.95, duration: 300 },
+          { alpha: 0, duration: 400 },
+        ],
+        onComplete: () => sigil.destroy(),
+      });
     }
   }
 

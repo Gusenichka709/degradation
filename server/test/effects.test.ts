@@ -13,7 +13,9 @@ test('помехи включаются на своих порогах и с г�
   assert.deepEqual(at(55), ['blot', 'glimpse', 'vignette']);
   assert.deepEqual(at(65), ['blot', 'cracks', 'glimpse', 'vignette']);
   assert.deepEqual(at(75), ['blot', 'colors', 'cracks', 'glimpse', 'vignette']);
-  assert.deepEqual(at(100), ['blot', 'colors', 'cracks', 'glimpse', 'names', 'vignette']);
+  assert.deepEqual(at(85), ['blot', 'colors', 'cracks', 'glimpse', 'names', 'vignette']);
+  assert.deepEqual(at(95), ['blot', 'colors', 'cracks', 'glimpse', 'interface', 'names', 'vignette']);
+  assert.deepEqual(at(100), ['blot', 'colors', 'cracks', 'glimpse', 'interface', 'names', 'truth', 'vignette']);
 
   for (const effect of Object.keys(EFFECT_FROM) as Effect[]) {
     assert.equal(effectStrength(effect, thresholdIndex(EFFECT_FROM[effect])), 1, `${effect}: на своём пороге сила 1`);

@@ -40,6 +40,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('blot', 'assets/blot.png');
     this.load.image('cracks', 'assets/cracks.png');
     this.load.image('glimpse', 'assets/glimpse.png');
+    this.load.image('sigil', 'assets/sigil.png');
   }
 
   create(): void {
@@ -125,6 +126,13 @@ export class BootScene extends Phaser.Scene {
       problems.push(
         `glimpse.png: ${glimpse.w} × ${glimpse.h}, а нужно ровно ${GLIMPSE_WIDTH} × ${GLIMPSE_HEIGHT} (как кадр персонажа).`,
       );
+    }
+
+    const sigil = size('sigil');
+    if (!sigil) {
+      problems.push(missing('sigil.png'));
+    } else if (sigil.w !== TILE_SIZE || sigil.h !== TILE_SIZE) {
+      problems.push(`sigil.png: ${sigil.w} × ${sigil.h}, а нужно ровно ${TILE_SIZE} × ${TILE_SIZE} (как клетка).`);
     }
 
     return problems;
