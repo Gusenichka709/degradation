@@ -6,6 +6,7 @@ import { WorldScene, type WorldSceneData } from './scenes/WorldScene';
 import { ChatBox } from './ui/chat';
 import { Hud } from './ui/hud';
 import { LoginScreen } from './ui/login';
+import { MindBar } from './ui/mind';
 import { StatusBar, Warnings } from './ui/status';
 import './style.css';
 
@@ -52,6 +53,7 @@ const net = new Net();
 const login = new LoginScreen();
 const chat = new ChatBox();
 const hud = new Hud();
+const mind = new MindBar();
 const status = new StatusBar();
 const warnings = new Warnings();
 let myId = 0;
@@ -110,6 +112,7 @@ async function enterWorld(name: string): Promise<string | null> {
   status.hide();
   chat.show();
   hud.show();
+  mind.show();
   const data: WorldSceneData = { net, chat, hud, myId: message.id, you: message.you, tick: message.tick };
   game.scene.start('world', data);
   return null;
@@ -169,6 +172,7 @@ login.onSubmit = async (name) => {
 net.on((message) => {
   if (message.t === 'chat') chat.add(message.id === myId ? 'self' : 'chat', message.text, message.name);
   else if (message.t === 'system') chat.add('system', message.text);
+  else if (message.t === 'scale') mind.update(message.band, message.shown);
 });
 
 chat.onSend = (text) => net.send({ t: 'chat', text });
@@ -177,5 +181,6 @@ net.onClose = () => {
   if (!myName) return; // ещё не в игре — возвращать некуда
   game.scene.stop('world');
   hud.hide();
+  mind.hide();
   void reconnect();
 };

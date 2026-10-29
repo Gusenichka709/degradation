@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "test": "tsx --test test/map.test.ts test/movement.test.ts test/degradation.test.ts test/gathering.test.ts test/server.test.ts test/stress.test.ts"
+    "test": "tsx --test test/map.test.ts test/movement.test.ts test/degradation.test.ts test/gathering.test.ts test/scale.test.ts test/server.test.ts test/stress.test.ts"
   },
   "dependencies": {
     "@game/shared": "*",

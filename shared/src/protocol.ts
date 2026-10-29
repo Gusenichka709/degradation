@@ -57,6 +57,11 @@ export type ServerMessage =
   | { t: 'system'; text: string }
   /** Место сбора опустело (picked: true) или отросло (false). */
   | { t: 'resource'; id: number; picked: boolean }
+  /**
+   * Шкала деградации: номер порога (0 — ниже 25 %, 11 — 100 %) и число, которое она показывает.
+   * Число уже с враньём, настоящее клиенту не уходит. shown: null — шкалы сейчас не видно.
+   */
+  | { t: 'scale'; band: number; shown: number | null }
   | { t: 'pong'; c: number };
 
 function isNumber(value: unknown): value is number {

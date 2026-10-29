@@ -18,6 +18,7 @@ import {
 } from '@game/shared';
 import { Degradation, DegradationMemory, Habit } from './degradation';
 import { NOTHING_TO_GATHER, ResourceField, emptyText, gatherText } from './gathering';
+import { LyingScale, type ScaleView } from './scale';
 
 /** То, через что мир отправляет сообщения игроку. На деле это WebSocket, в тестах — заглушка. */
 export interface Outbox {
@@ -51,6 +52,9 @@ interface Player {
   nextUseAt: number;
   /** Зашёл с того же компьютера, где сервер. Только таким можно отладочные команды. */
   local: boolean;
+  /** Шкала деградации, которая врёт, и что она показывала в последний раз. */
+  scale: LyingScale;
+  lastScale: ScaleView | null;
   outbox: Outbox;
 }
 
@@ -135,6 +139,8 @@ export class World {
       habit: new Habit(),
       nextUseAt: 0,
       local: options.local ?? false,
+      scale: new LyingScale(this.random),
+      lastScale: null,
       outbox,
     };
     this.players.set(player.id, player);
@@ -147,6 +153,7 @@ export class World {
       players: this.roster(),
       picked: this.resources.picked,
     });
+    this.sendScale(player);
     this.broadcast({ t: 'joined', player: { id: player.id, name } }, player.id);
     this.broadcast({ t: 'system', text: `${name} входит в мир` });
     return { ok: true, id: player.id };
@@ -252,6 +259,7 @@ export class World {
     for (const player of this.players.values()) {
       this.movePlayer(player);
       player.degradation.fade(TICK_SECONDS);
+      this.sendScale(player);
     }
     for (const id of this.resources.regrow(this.now())) this.broadcast({ t: 'resource', id, picked: false });
 
@@ -281,6 +289,15 @@ export class World {
     } else if (++player.idleTicks >= IDLE_TICKS_TO_STOP) {
       player.moving = false;
     }
+  }
+
+  /** Шлёт игроку шкалу, если она изменилась. */
+  private sendScale(player: Player): void {
+    const view = player.scale.update(player.degradation.current, this.now());
+    const last = player.lastScale;
+    if (last && last.band === view.band && last.shown === view.shown) return;
+    player.lastScale = view;
+    player.outbox.send({ t: 'scale', band: view.band, shown: view.shown });
   }
 
   private roster(): PlayerInfo[] {

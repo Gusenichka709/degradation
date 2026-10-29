@@ -237,9 +237,134 @@ button:disabled {
   pointer-events: none;
 }
 
+/* --- шкала деградации: число присылает сервер, помехи рисуем по номеру порога --- */
+
+#mind {
+  position: fixed;
+  top: 44px;
+  right: 10px;
+  z-index: 5;
+  width: 170px;
+  padding: 6px 10px 8px;
+  background: var(--panel);
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.mind-row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+#mind-value {
+  color: var(--ink);
+  font-family: Consolas, 'Courier New', monospace;
+}
+
+.mind-bar {
+  height: 6px;
+  margin-top: 5px;
+  overflow: hidden;
+  background: #2a261f;
+  border-radius: 3px;
+}
+
+#mind-fill {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #a6e3a1, #c9a24a 50%, #e2846b);
+  background-size: 170px 100%;
+  transition: width 0.4s;
+}
+
+/* 25 %: чуть дрожит */
+#mind.glitch-1 {
+  animation: mind-shake 0.3s steps(2) infinite;
+}
+
+/* 30 %: дрожит и иногда мигает */
+#mind.glitch-2 {
+  animation:
+    mind-shake 0.25s steps(2) infinite,
+    mind-blink 2.3s steps(1) infinite;
+}
+
+/* 35 %: плывёт (сдвиги и перекос — в одной анимации: две анимации transform перебивают друг друга) */
+#mind.glitch-3 {
+  filter: blur(0.5px);
+  animation:
+    mind-skew 1.7s steps(6) infinite,
+    mind-blink 1.9s steps(1) infinite;
+}
+
+/* 40 % и 45 %: рвётся */
+#mind.glitch-4,
+#mind.glitch-5 {
+  filter: blur(0.8px) hue-rotate(40deg);
+  animation:
+    mind-skew 1.1s steps(6) infinite,
+    mind-blink 1.3s steps(1) infinite;
+}
+
+#mind.glitch-5 {
+  filter: blur(1.2px) hue-rotate(160deg) contrast(1.6);
+}
+
+@keyframes mind-shake {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(1px, -1px);
+  }
+}
+
+@keyframes mind-blink {
+  0%,
+  88% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.15;
+  }
+  94% {
+    opacity: 0.8;
+  }
+  96% {
+    opacity: 0;
+  }
+}
+
+@keyframes mind-skew {
+  0% {
+    transform: translate(0, 0) skewX(0);
+  }
+  17% {
+    transform: translate(1px, -1px) skewX(0);
+  }
+  33% {
+    transform: translate(2px, 0) skewX(-6deg);
+  }
+  50% {
+    transform: translate(0, 1px) skewX(0);
+  }
+  66% {
+    transform: translate(-1px, 0) skewX(3deg);
+  }
+  83% {
+    transform: translate(1px, 1px) skewX(0);
+  }
+}
+
 /* На узком окне подсказка налезала бы на строчку пинга — прячем её. */
 @media (max-width: 760px) {
   #help {
     display: none;
+  }
+
+  #mind {
+    top: 10px;
   }
 }
