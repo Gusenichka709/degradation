@@ -40,8 +40,8 @@ export const MAX_PLAYERS = 50;
 /** Деградация в процентах: от −20 (усердная учёба) до 100 (мир почти неузнаваем). */
 export const DEGRADATION_MIN = -20;
 export const DEGRADATION_MAX = 100;
-/** Пороги, на которых включаются новые эффекты, %. */
-export const DEGRADATION_THRESHOLDS = [25, 50, 75, 100] as const;
+/** Пороги, на которых включаются новые эффекты, %. На каждом что-то своё; с 50 % шкалы уже не видно. */
+export const DEGRADATION_THRESHOLDS = [25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100] as const;
 /** Как быстро выветривается действие зелий: процентов в секунду (15 % уйдут за 2,5 минуты). */
 export const RELIEF_FADE_PER_SECOND = 0.1;
 /**
