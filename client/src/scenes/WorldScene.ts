@@ -20,6 +20,7 @@ import {
   type ServerMessage,
 } from '@game/shared';
 import type { Net } from '../net';
+import type { BookView } from '../ui/book';
 import type { ChatBox } from '../ui/chat';
 import type { Hud } from '../ui/hud';
 import { DIRECTION_NAMES, HERO_FRAMES_PER_ROW } from './BootScene';
@@ -28,6 +29,7 @@ export interface WorldSceneData {
   net: Net;
   chat: ChatBox;
   hud: Hud;
+  book: BookView;
   myId: number;
   you: PlayerSnapshot;
   tick: number;
@@ -139,6 +141,7 @@ export class WorldScene extends Phaser.Scene {
   private net!: Net;
   private chat!: ChatBox;
   private hud!: Hud;
+  private book!: BookView;
   private myId = 0;
 
   private map!: Phaser.Tilemaps.Tilemap;
@@ -168,6 +171,7 @@ export class WorldScene extends Phaser.Scene {
     this.net = data.net;
     this.chat = data.chat;
     this.hud = data.hud;
+    this.book = data.book;
     this.myId = data.myId;
     this.predicted = { x: data.you.x, y: data.you.y };
     this.previous = { ...this.predicted };
@@ -210,7 +214,7 @@ export class WorldScene extends Phaser.Scene {
     });
     // E — собрать то, что рядом. Что именно и вышло ли, решает сервер. Зажатая клавиша не повторяет.
     this.input.keyboard!.on('keydown-E', (event: KeyboardEvent) => {
-      if (!event.repeat && !this.chat.typing) this.net.send({ t: 'use' });
+      if (!event.repeat && !this.busy) this.net.send({ t: 'use' });
     });
     // Ушли в другое окно — отпускаем клавиши, чтобы персонаж не убежал сам.
     this.game.events.on(Phaser.Core.Events.BLUR, this.releaseKeys, this);
@@ -262,7 +266,7 @@ export class WorldScene extends Phaser.Scene {
   /** Один тик: читаем клавиши, двигаемся сами и сообщаем серверу. */
   private fixedTick(): void {
     const k = this.keys;
-    const typing = this.chat.typing;
+    const typing = this.busy;
     const right = !typing && (k.right.isDown || k.right2.isDown);
     const left = !typing && (k.left.isDown || k.left2.isDown);
     const down = !typing && (k.down.isDown || k.down2.isDown);
@@ -282,6 +286,11 @@ export class WorldScene extends Phaser.Scene {
     this.pending.push(input);
     if (this.pending.length > MAX_PENDING_INPUTS) this.pending.shift();
     this.net.send(input);
+  }
+
+  /** Игрок печатает в чат или читает книгу: клавиши не про ходьбу. */
+  private get busy(): boolean {
+    return this.chat.typing || this.book.isOpen;
   }
 
   private readAim(): number {

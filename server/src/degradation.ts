@@ -97,6 +97,12 @@ export class Habit {
   get count(): number {
     return this.streak;
   }
+
+  /** Занялся другим делом (например, читал в библиотеке): приедание сбрасывается. */
+  reset(): void {
+    this.kind = null;
+    this.streak = 0;
+  }
 }
 
 /**

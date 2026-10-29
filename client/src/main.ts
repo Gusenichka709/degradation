@@ -3,6 +3,7 @@ import { SERVER_PORT, type ServerMessage } from '@game/shared';
 import { Net } from './net';
 import { BootScene } from './scenes/BootScene';
 import { WorldScene, type WorldSceneData } from './scenes/WorldScene';
+import { BookView } from './ui/book';
 import { ChatBox } from './ui/chat';
 import { Hud } from './ui/hud';
 import { LoginScreen } from './ui/login';
@@ -54,6 +55,7 @@ const login = new LoginScreen();
 const chat = new ChatBox();
 const hud = new Hud();
 const mind = new MindBar();
+const book = new BookView();
 const status = new StatusBar();
 const warnings = new Warnings();
 let myId = 0;
@@ -113,7 +115,7 @@ async function enterWorld(name: string): Promise<string | null> {
   chat.show();
   hud.show();
   mind.show();
-  const data: WorldSceneData = { net, chat, hud, myId: message.id, you: message.you, tick: message.tick };
+  const data: WorldSceneData = { net, chat, hud, book, myId: message.id, you: message.you, tick: message.tick };
   game.scene.start('world', data);
   return null;
 }
@@ -173,7 +175,10 @@ net.on((message) => {
   if (message.t === 'chat') chat.add(message.id === myId ? 'self' : 'chat', message.text, message.name);
   else if (message.t === 'system') chat.add('system', message.text);
   else if (message.t === 'scale') mind.update(message.band, message.shown);
+  else if (message.t === 'book') book.show(message);
 });
+
+book.onAnswer = (choice) => net.send({ t: 'answer', choice });
 
 chat.onSend = (text) => net.send({ t: 'chat', text });
 
@@ -182,5 +187,6 @@ net.onClose = () => {
   game.scene.stop('world');
   hud.hide();
   mind.hide();
+  book.hide();
   void reconnect();
 };

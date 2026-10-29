@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { SERVER_PORT } from '@game/shared';
+import { loadBooks } from './books';
 import { startServer } from './server';
 
 const port = Number(process.env.PORT) || SERVER_PORT;
@@ -10,6 +11,9 @@ const staticDir = existsSync(distDir) ? distDir : null;
 try {
   const server = await startServer({ port, staticDir, log: (line) => console.log(line) });
   console.log(`Сервер игры запущен на порту ${server.port}.`);
+  const library = loadBooks();
+  console.log(`В библиотеке книг: ${library.books.length}.`);
+  for (const problem of library.problems) console.warn(`Книга сломана — ${problem}`);
   console.log(
     staticDir
       ? `Открой в браузере: http://localhost:${server.port}`

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   MAP_COLS,
   MAP_ROWS,
+  PLACES,
   RESOURCE_SPOTS,
   SPAWN_TILE,
   TILE_GRID,
@@ -73,5 +74,13 @@ test('к каждому кусту, камню и шахте можно подо
       [col, row - 1],
     ].some(([c, r]) => !isSolidTile(c!, r!));
     assert.ok(free, `к месту «${kind}» в ${col}, ${row} не подойти`);
+  }
+});
+
+test('двери библиотеки и травницы — это двери, и к ним можно подойти', () => {
+  const door = TILE_KINDS.find((kind) => kind.char === 'D')!.index;
+  for (const [place, { col, row }] of Object.entries(PLACES)) {
+    assert.equal(TILE_GRID[row]![col], door, `${place}: на месте двери не дверь`);
+    assert.equal(isSolidTile(col, row + 1), false, `${place}: под дверью не встать`);
   }
 });

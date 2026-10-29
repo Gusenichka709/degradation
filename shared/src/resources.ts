@@ -9,7 +9,7 @@ import {
   TILE_SIZE,
   USE_REACH,
 } from './constants';
-import { PICKED_BUSH_TILE, PICKED_STONE_TILE, TILE_GRID, TILE_KINDS } from './map';
+import { PICKED_BUSH_TILE, PICKED_STONE_TILE, PLACES, TILE_GRID, TILE_KINDS, type PlaceKind } from './map';
 
 /**
  * Что можно собирать по E. Вид важен для приедания: оно считает сборы одного вида подряд.
@@ -84,16 +84,23 @@ export function distanceToTile(x: number, y: number, col: number, row: number): 
   return Math.hypot(dx, dy);
 }
 
-/** Ближайшее место сбора, до которого можно дотянуться из точки (x, y), или null. */
-export function spotInReach(x: number, y: number): ResourceSpot | null {
-  let best: ResourceSpot | null = null;
+/** То, что можно сделать по E: собрать куст, камень, шахту или зайти в дверь (библиотека, травница). */
+export type Usable = { type: 'spot'; spot: ResourceSpot } | { type: 'place'; place: PlaceKind };
+
+/** Ближайшее, до чего можно дотянуться из точки (x, y), или null. */
+export function usableInReach(x: number, y: number): Usable | null {
+  let best: Usable | null = null;
   let bestDistance = USE_REACH;
-  for (const spot of RESOURCE_SPOTS) {
-    const distance = distanceToTile(x, y, spot.col, spot.row);
+  const consider = (usable: Usable, col: number, row: number) => {
+    const distance = distanceToTile(x, y, col, row);
     if (distance <= bestDistance) {
-      best = spot;
+      best = usable;
       bestDistance = distance;
     }
+  };
+  for (const spot of RESOURCE_SPOTS) consider({ type: 'spot', spot }, spot.col, spot.row);
+  for (const [place, { col, row }] of Object.entries(PLACES) as [PlaceKind, { col: number; row: number }][]) {
+    consider({ type: 'place', place }, col, row);
   }
   return best;
 }

@@ -73,6 +73,8 @@ test('мусор от клиента сервер не роняет', async () =
   bot.send({ t: 'input', seq: 'раз', dx: 1, dy: 0, aim: 0 });
   bot.send({ t: 'chat', text: 'чат до входа' });
   bot.send({ t: 'взлом' });
+  bot.send({ t: 'answer', choice: 'два' });
+  bot.send({ t: 'answer', choice: -1 });
   const welcome = await bot.join('Хитрец');
   assert.equal(typeof welcome.id, 'number');
   await bot.close();
@@ -85,6 +87,7 @@ test('E и отладочная команда доходят через сет�
 
   bot.send({ t: 'use' });
   await bot.waitFor('system', (m) => m.text === 'Рядом нечего собрать.');
+  bot.send({ t: 'answer', choice: 1 }); // книги не открыто — сервер просто промолчит
 
   // Бот подключён с 127.0.0.1 — это «тот же компьютер», ему отладка можно.
   bot.send({ t: 'chat', text: '/дег 12' });

@@ -1,5 +1,9 @@
 import {
+  BOOK_STUDY,
+  LIBRARY_COOLDOWN_MS,
   MAX_PLAYERS,
+  POTION_COOLDOWN_MS,
+  POTION_RELIEF,
   RESOURCE_RULES,
   TICK_MS,
   TICK_SECONDS,
@@ -9,14 +13,17 @@ import {
   normalizeName,
   round2,
   spawnPoints,
-  spotInReach,
   stepMovement,
+  usableInReach,
   type InputMessage,
   type PlayerInfo,
   type PlayerSnapshot,
+  type ResourceSpot,
   type ServerMessage,
 } from '@game/shared';
+import { loadBooks, type Book } from './books';
 import { Degradation, DegradationMemory, Habit } from './degradation';
+import { distortText, distortionShare } from './distort';
 import { NOTHING_TO_GATHER, ResourceField, emptyText, gatherText } from './gathering';
 import { LyingScale, type ScaleView } from './scale';
 
@@ -55,6 +62,11 @@ interface Player {
   /** Шкала деградации, которая врёт, и что она показывала в последний раз. */
   scale: LyingScale;
   lastScale: ScaleView | null;
+  /** Открытая книга: какой вариант ответа правильный. null — ничего не читает. */
+  reading: { correct: number } | null;
+  /** Раньше этого времени (мс) библиотека новую книгу не даст, травница не нальёт. */
+  nextBookAt: number;
+  nextPotionAt: number;
   outbox: Outbox;
 }
 
@@ -69,6 +81,21 @@ export type JoinResult = { ok: true; id: number } | { ok: false; error: string }
 export interface JoinOptions {
   /** Игрок зашёл с того же компьютера, где запущен сервер: ему можно /дег. */
   local?: boolean;
+}
+
+/** Сколько ещё ждать — по-человечески: «40 с» или «3 мин». */
+function waitText(ms: number): string {
+  return ms < 60 * 1000 ? `${Math.ceil(ms / 1000)} с` : `${Math.ceil(ms / 60000)} мин`;
+}
+
+/** Перемешивает массив (копию). */
+function shuffled<T>(items: readonly T[], random: () => number): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+  }
+  return copy;
 }
 
 /** Число для отладочных сообщений: «12,5», без лишних нулей. */
@@ -87,9 +114,14 @@ export class World {
   private nextId = 1;
   tick = 0;
 
+  /**
+   * books — откуда брать книги для библиотеки. По умолчанию читаем content/books при каждом визите:
+   * Фима поправил книгу — она сразу в игре, без перезапуска.
+   */
   constructor(
     private readonly now: () => number = () => Date.now(),
     private readonly random: () => number = Math.random,
+    private readonly books: () => readonly Book[] = () => loadBooks().books,
   ) {
     this.memory = new DegradationMemory(now);
   }
@@ -141,6 +173,9 @@ export class World {
       local: options.local ?? false,
       scale: new LyingScale(this.random),
       lastScale: null,
+      reading: null,
+      nextBookAt: 0,
+      nextPotionAt: 0,
       outbox,
     };
     this.players.set(player.id, player);
@@ -195,18 +230,37 @@ export class World {
     this.broadcast({ t: 'chat', id, name: player.name, text });
   }
 
-  /** Игрок нажал E: собирает куст, камень или шахту рядом. */
+  /** Игрок нажал E: собирает куст, камень или шахту рядом либо заходит в библиотеку или к травнице. */
   use(id: number): void {
     const player = this.players.get(id);
     if (!player) return;
     const now = this.now();
     if (now < player.nextUseAt) return; // руки ещё заняты прошлым сбором
-    const spot = spotInReach(player.x, player.y);
-    if (!spot) {
+    const target = usableInReach(player.x, player.y);
+    if (!target) {
       player.nextUseAt = now + USE_COOLDOWN_MS;
       player.outbox.send({ t: 'system', text: NOTHING_TO_GATHER });
       return;
     }
+    if (target.type === 'spot') this.gather(player, target.spot, now);
+    else if (target.place === 'library') this.openBook(player, now);
+    else this.drinkPotion(player, now);
+  }
+
+  /** Ответ на вопрос по открытой книге. Без открытой книги ничего не делает. */
+  answer(id: number, choice: number): void {
+    const player = this.players.get(id);
+    if (!player?.reading) return;
+    const correct = player.reading.correct === choice;
+    player.reading = null;
+    if (correct) player.degradation.study(BOOK_STUDY);
+    player.outbox.send({
+      t: 'system',
+      text: correct ? 'Ты понял прочитанное. В голове чуть яснее.' : 'Ты ничего не понял. Может, в другой раз.',
+    });
+  }
+
+  private gather(player: Player, spot: ResourceSpot, now: number): void {
     if (this.resources.isPicked(spot.id)) {
       player.nextUseAt = now + USE_COOLDOWN_MS;
       player.outbox.send({ t: 'system', text: emptyText(spot.kind) });
@@ -219,6 +273,56 @@ export class World {
     player.degradation.grow(rule.growth * multiplier);
     if (this.resources.pick(spot, now)) this.broadcast({ t: 'resource', id: spot.id, picked: true });
     player.outbox.send({ t: 'system', text: gatherText(spot.kind, multiplier) });
+  }
+
+  /**
+   * Библиотека: даёт случайную книгу, искажённую по деградации читающего. Попытка считается
+   * с момента, как книгу открыли: закрыл, не ответив, — попытка сгорела. Чтение — другое дело,
+   * поэтому приедание сбрасывается.
+   */
+  private openBook(player: Player, now: number): void {
+    player.nextUseAt = now + USE_COOLDOWN_MS;
+    const tell = (text: string) => player.outbox.send({ t: 'system', text });
+    if (now < player.nextBookAt) {
+      tell(`Библиотекарь: «Голова не резиновая. Приходи через ${waitText(player.nextBookAt - now)}».`);
+      return;
+    }
+    const books = this.books();
+    const book = books[Math.floor(this.random() * books.length)];
+    if (!book) {
+      tell('Полки пустые: в библиотеке нет ни одной книги.');
+      return;
+    }
+
+    player.nextBookAt = now + LIBRARY_COOLDOWN_MS;
+    player.habit.reset();
+    const order = shuffled(
+      book.options.map((_, index) => index),
+      this.random,
+    );
+    player.reading = { correct: order.indexOf(book.correct) };
+    const share = distortionShare(player.degradation.current);
+    const distort = (text: string) => distortText(text, share, this.random);
+    player.outbox.send({
+      t: 'book',
+      title: distort(book.title),
+      text: distort(book.text),
+      question: distort(book.question),
+      options: order.map((index) => distort(book.options[index]!)),
+    });
+  }
+
+  /** Травница: бесплатное зелье раз в минуту. Опускает текущую деградацию на время. */
+  private drinkPotion(player: Player, now: number): void {
+    player.nextUseAt = now + USE_COOLDOWN_MS;
+    if (now < player.nextPotionAt) {
+      const wait = waitText(player.nextPotionAt - now);
+      player.outbox.send({ t: 'system', text: `Травница: «Хватит с тебя. Приходи через ${wait}».` });
+      return;
+    }
+    player.nextPotionAt = now + POTION_COOLDOWN_MS;
+    player.degradation.drink(POTION_RELIEF);
+    player.outbox.send({ t: 'system', text: 'Ты выпил отвар травницы. В голове проясняется.' });
   }
 
   /**

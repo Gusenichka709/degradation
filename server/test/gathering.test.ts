@@ -9,52 +9,9 @@ import {
   MINE_GROWTH,
   RESOURCE_SPOTS,
   TILE_SIZE,
-  type ServerMessage,
 } from '@game/shared';
 import { Habit } from '../src/degradation';
-import { World } from '../src/world';
-
-/** Мир с ручными часами; у каждого игрока свой список пришедших сообщений. */
-function makeWorld() {
-  const clock = { now: 0 };
-  const world = new World(() => clock.now, () => 0);
-  const inbox = new Map<number, ServerMessage[]>();
-  const join = (name: string, local = false) => {
-    const sent: ServerMessage[] = [];
-    const result = world.join({ send: (message) => sent.push(message) }, name, { local });
-    assert.ok(result.ok, 'не пустили в мир');
-    inbox.set(result.id, sent);
-    return result.id;
-  };
-  const said = (id: number) =>
-    inbox.get(id)!.flatMap((m) => (m.t === 'system' ? [m.text] : m.t === 'chat' ? [`${m.name}: ${m.text}`] : []));
-  return { world, clock, inbox, join, said };
-}
-
-/** Ведёт персонажа к точке: сначала по X, потом по Y, по нажатию на тик. Упёрся — стоп. */
-function walkTo(world: World, id: number, x: number, y: number): void {
-  let seq = 0;
-  const go = (axis: 'x' | 'y', target: number) => {
-    for (let i = 0; i < 1000; i++) {
-      const before = world.positionOf(id)!;
-      const delta = target - before[axis];
-      if (Math.abs(delta) < 3) return;
-      const step = delta > 0 ? 1 : -1;
-      world.queueInput(id, {
-        t: 'input',
-        seq: ++seq,
-        dx: axis === 'x' ? step : 0,
-        dy: axis === 'y' ? step : 0,
-        aim: 0,
-      });
-      world.step();
-      const after = world.positionOf(id)!;
-      if (after.x === before.x && after.y === before.y) return; // упёрлись
-    }
-  };
-  go('x', x);
-  go('y', y);
-}
+import { makeWorld, walk } from './helpers';
 
 function spotAt(col: number, row: number) {
   const spot = RESOURCE_SPOTS.find((s) => s.col === col && s.row === row);
@@ -71,6 +28,9 @@ test('приедание: одно и то же подряд тупит силь
   assert.equal(habit.repeat('stone', 11_000), 1, 'другой вид должен сбросить множитель');
   assert.equal(habit.repeat('stone', 12_000), 1.25);
   assert.equal(habit.repeat('stone', 12_000 + HABIT_RESET_MS + 1), 1, 'минута перерыва должна сбросить множитель');
+  habit.repeat('stone', 80_000);
+  habit.reset();
+  assert.equal(habit.repeat('stone', 81_000), 1, 'чтение в библиотеке должно сбросить множитель');
 });
 
 test('сорвал ягоды — деградация выросла, куст опустел для всех и через минуту отрос', () => {
@@ -80,7 +40,7 @@ test('сорвал ягоды — деградация выросла, куст 
   const bush = spotAt(28, 13);
 
   // Встаём под кустом: идём по дороге вправо, потом вверх, пока куст не упрётся в макушку.
-  walkTo(world, id, bush.col * TILE_SIZE + TILE_SIZE / 2, (bush.row + 1) * TILE_SIZE);
+  walk(world, id, [bush.col * TILE_SIZE + TILE_SIZE / 2, (bush.row + 1) * TILE_SIZE]);
   world.use(id);
   assert.ok(Math.abs(world.degradationOf(id)!.actual - BUSH_GROWTH) < 0.0001);
   assert.ok(said(id).includes('Ты нарвал ягод.'));
@@ -109,7 +69,7 @@ test('шахта не кончается, бьёшь не чаще раза в 2
   const { world, clock, join, said } = makeWorld();
   const id = join('Шахтёр');
   const mine = spotAt(42, 26);
-  walkTo(world, id, mine.col * TILE_SIZE + TILE_SIZE / 2, mine.row * TILE_SIZE);
+  walk(world, id, [mine.col * TILE_SIZE + TILE_SIZE / 2, mine.row * TILE_SIZE]);
 
   const d = world.degradationOf(id)!;
   world.use(id);

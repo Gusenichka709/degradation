@@ -10,6 +10,7 @@ import { FEET_HEIGHT, TILE_SIZE } from './constants';
  *   D  дверь          f  забор            b  куст            r  камень
  *   m  шахта
  *   S  точка, где появляются игроки (это тоже дорога)
+ *   L  дверь библиотеки, H  дверь травницы (рисуются как обычная дверь, заходят по E)
  *
  * Сквозь воду, деревья, стены, крыши, двери, заборы, кусты, камни и шахту не пройти.
  * Кусты, камни и шахту собирают по E (см. resources.ts).
@@ -37,7 +38,7 @@ TT.b..........T..,,,,,,,,,,.."........~~b.....TT
 TT..RRRRRRR......,,,,,,,,,,...........~~.T..r.TT
 TT..RRRRRRR..."......,,.....RRRRR..b..~~......TT
 TT..RRRRRRR..........,,.....RRRRR.....~~...T..TT
-TT..###D###....b..T..,,.T"..##D##...".~~".....TT
+TT..###L###....b..T..,,.T"..##H##...".~~".....TT
 TT.....,...........".,,.......,.......~~.....TTT
 TT.....,.............,,.......,...r...~~...b..TT
 TT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,~~......TT
@@ -85,9 +86,23 @@ export const PICKED_STONE_TILE = 13;
 export const TILES_NEEDED =
   Math.max(...TILE_KINDS.map((kind) => kind.index), PICKED_BUSH_TILE, PICKED_STONE_TILE) + 1;
 
-/** Буква точки появления. Рисуется как дорога. */
-const SPAWN_CHAR = 'S';
-const SPAWN_DRAWN_AS = ',';
+/** Особые места: куда можно зайти по E. */
+export type PlaceKind = 'library' | 'herbalist';
+
+/**
+ * Особые буквы: рисуются как обычная клетка (дорога, дверь), но игра запоминает, где они стоят.
+ * Каждая должна быть на карте ровно один раз.
+ */
+const MARKERS = {
+  S: { drawnAs: ',', name: 'точка появления' },
+  L: { drawnAs: 'D', name: 'дверь библиотеки' },
+  H: { drawnAs: 'D', name: 'дверь травницы' },
+} as const;
+type MarkerChar = keyof typeof MARKERS;
+
+function isMarker(char: string): char is MarkerChar {
+  return char in MARKERS;
+}
 
 const KIND_BY_CHAR = new Map(TILE_KINDS.map((kind) => [kind.char, kind]));
 
@@ -96,7 +111,7 @@ function parseMap(text: string) {
   const cols = rows[0]?.length ?? 0;
   const grid: number[][] = [];
   const solid: boolean[][] = [];
-  const spawns: { col: number; row: number }[] = [];
+  const found = new Map<MarkerChar, { col: number; row: number }[]>();
 
   for (let row = 0; row < rows.length; row++) {
     const line = rows[row]!;
@@ -107,9 +122,9 @@ function parseMap(text: string) {
     const solidRow: boolean[] = [];
     for (let col = 0; col < cols; col++) {
       let char = line[col]!;
-      if (char === SPAWN_CHAR) {
-        spawns.push({ col, row });
-        char = SPAWN_DRAWN_AS;
+      if (isMarker(char)) {
+        found.set(char, [...(found.get(char) ?? []), { col, row }]);
+        char = MARKERS[char].drawnAs;
       }
       const kind = KIND_BY_CHAR.get(char);
       if (!kind) {
@@ -122,9 +137,17 @@ function parseMap(text: string) {
     solid.push(solidRow);
   }
 
-  const spawn = spawns[0];
-  if (!spawn) throw new Error(`Карта сломана: нет точки появления «${SPAWN_CHAR}».`);
-  return { cols, rows: rows.length, grid, solid, spawn };
+  const marker = (char: MarkerChar) => {
+    const places = found.get(char) ?? [];
+    if (places.length !== 1) {
+      const problem = places.length === 0 ? 'нет' : 'больше одной буквы';
+      throw new Error(`Карта сломана: ${problem} «${char}» (${MARKERS[char].name}).`);
+    }
+    return places[0]!;
+  };
+  const spawn = marker('S');
+  const places: Record<PlaceKind, { col: number; row: number }> = { library: marker('L'), herbalist: marker('H') };
+  return { cols, rows: rows.length, grid, solid, spawn, places };
 }
 
 const parsed = parseMap(MAP_TEXT);
@@ -141,6 +164,9 @@ export const TILE_GRID: readonly (readonly number[])[] = parsed.grid;
 
 /** Клетка, где появляются игроки. */
 export const SPAWN_TILE = parsed.spawn;
+
+/** Где двери библиотеки и травницы. */
+export const PLACES: Readonly<Record<PlaceKind, { col: number; row: number }>> = parsed.places;
 
 /** Непроходима ли клетка. Всё за краем карты считается стеной. */
 export function isSolidTile(col: number, row: number): boolean {

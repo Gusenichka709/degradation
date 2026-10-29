@@ -84,6 +84,7 @@ export function startServer(options: ServerOptions): Promise<RunningServer> {
       if (message.t === 'input') world.queueInput(playerId, message);
       else if (message.t === 'chat') world.chat(playerId, message.text);
       else if (message.t === 'use') world.use(playerId);
+      else if (message.t === 'answer') world.answer(playerId, message.choice);
     });
 
     socket.on('close', () => {

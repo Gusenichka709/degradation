@@ -118,6 +118,52 @@ button:disabled {
   font-size: 13px;
 }
 
+/* --- книга из библиотеки --- */
+
+.panel.book {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.book h2 {
+  margin: 0 0 14px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 22px;
+  font-weight: normal;
+}
+
+#book-text p {
+  margin: 0 0 10px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+#book-question {
+  margin: 18px 0 8px;
+  font-weight: bold;
+}
+
+#book-options button {
+  margin-top: 8px;
+  text-align: left;
+  font-weight: normal;
+  color: var(--ink);
+  background: #2a261f;
+  border: 1px solid var(--line);
+}
+
+#book-options button:hover {
+  border-color: var(--accent);
+}
+
+.book-hint {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 /* --- плашки: переподключение и предупреждения про картинки --- */
 
 #status {

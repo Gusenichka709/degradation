@@ -36,8 +36,10 @@ export type ClientMessage =
   | { t: 'join'; name: string }
   | InputMessage
   | { t: 'chat'; text: string }
-  /** Нажал E: собрать то, что рядом. Что именно, решает сервер. */
+  /** Нажал E: собрать то, что рядом, или зайти в дверь. Что именно, решает сервер. */
   | { t: 'use' }
+  /** Ответ на вопрос по книге: номер варианта (с нуля) в том порядке, как их прислал сервер. */
+  | { t: 'answer'; choice: number }
   | { t: 'ping'; c: number };
 
 /** Сервер → клиент. */
@@ -62,6 +64,11 @@ export type ServerMessage =
    * Число уже с враньём, настоящее клиенту не уходит. shown: null — шкалы сейчас не видно.
    */
   | { t: 'scale'; band: number; shown: number | null }
+  /**
+   * Книга в библиотеке: текст, вопрос и варианты уже искажены по деградации читающего.
+   * Какой вариант правильный, клиент не знает — это помнит сервер.
+   */
+  | { t: 'book'; title: string; text: string; question: string; options: string[] }
   | { t: 'pong'; c: number };
 
 function isNumber(value: unknown): value is number {
@@ -102,6 +109,10 @@ export function parseClientMessage(raw: string): ClientMessage | null {
     }
     case 'use':
       return { t: 'use' };
+    case 'answer': {
+      const choice = m.choice;
+      return isSafeInt(choice) && choice >= 0 && choice < 10 ? { t: 'answer', choice } : null;
+    }
     case 'ping': {
       const c = m.c;
       return isNumber(c) ? { t: 'ping', c } : null;
