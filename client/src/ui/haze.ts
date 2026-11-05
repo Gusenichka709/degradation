@@ -47,7 +47,7 @@ export class Haze {
     this.vignette.className = 'haze-vignette';
     this.vignette.hidden = true;
     this.root.append(this.vignette);
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 1; i++) {
       const img = image('assets/blot.png', 'haze-blot');
       this.blots.push({ img, x: random(10, 70), y: random(10, 70), vx: 0, vy: 0, phase: random(0, 6) });
       this.root.append(img);
@@ -106,10 +106,10 @@ export class Haze {
     if (s > 0) this.vignette.style.opacity = String(Math.min(0.9, 0.3 + 0.08 * s));
   }
 
-  /** 35 %: клякса-морок медленно ползает по экрану, глубже их становится больше. */
+  /** 35 %: клякса-морок медленно ползает по экрану. */
   private drawBlots(dt: number, t: number): void {
     const s = effectStrength('blot', this.band);
-    const count = s === 0 ? 0 : s >= 7 ? 3 : s >= 4 ? 2 : 1;
+    const count = s === 0 ? 0 : this.blots.length;
     this.blots.forEach((blot, i) => {
       blot.img.hidden = i >= count;
       if (blot.img.hidden) return;
@@ -167,19 +167,15 @@ export class Haze {
     for (const lie of this.lies) lie.set(s > 0 ? distortText(lie.honest, 0.2 + 0.1 * s, Math.random) : lie.honest);
   }
 
-  /** 70 %: цвета мира плывут; на 90 % и глубже мир ещё и чуть качается. */
+  /** 70 %: цвета мира плывут. */
   private drawColors(t: number): void {
     const s = effectStrength('colors', this.band);
     if (s === 0) {
       this.game.style.filter = '';
-      this.game.style.transform = '';
       return;
     }
     const hue = Math.sin(t * 0.23) * 12 * s;
     const saturate = 1 + 0.12 * s * Math.sin(t * 0.17 + 1);
     this.game.style.filter = `hue-rotate(${hue.toFixed(1)}deg) saturate(${saturate.toFixed(2)}) contrast(${(1 + 0.06 * s).toFixed(2)})`;
-    // Чуть увеличиваем, чтобы при качании не вылезали края.
-    const tilt = (Math.sin(t * 0.5) * 0.4 * (s - 2)).toFixed(2);
-    this.game.style.transform = s >= 3 ? `rotate(${tilt}deg) scale(1.04)` : '';
   }
 }

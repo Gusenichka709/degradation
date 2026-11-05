@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EFFECT_FROM, effectStrength, thresholdIndex, type Effect } from '@game/shared';
+import { EFFECT_FROM, EFFECT_MAX_STRENGTH, effectStrength, thresholdIndex, type Effect } from '@game/shared';
 
 test('помехи включаются на своих порогах и с глубиной только усиливаются', () => {
   const at = (percent: number) =>
@@ -21,6 +21,7 @@ test('помехи включаются на своих порогах и с г�
     assert.equal(effectStrength(effect, thresholdIndex(EFFECT_FROM[effect])), 1, `${effect}: на своём пороге сила 1`);
     for (let band = 1; band <= 11; band++) {
       assert.ok(effectStrength(effect, band) >= effectStrength(effect, band - 1), `${effect} ослабла на пороге ${band}`);
+      assert.ok(effectStrength(effect, band) <= EFFECT_MAX_STRENGTH, `${effect} слишком сильная на пороге ${band}`);
     }
   }
 });
